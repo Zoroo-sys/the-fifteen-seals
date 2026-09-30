@@ -139,12 +139,16 @@ export class Reel {
     this.el.addEventListener("keydown", (event) => {
       if (this.locked) return;
       const actions = {
-        ArrowUp: () => this.turn(1),
-        ArrowDown: () => this.turn(-1),
-        ArrowLeft: () => this.focusNeighbor(-1),
-        ArrowRight: () => this.focusNeighbor(1),
+        arrowup: () => this.turn(1),
+        w: () => this.turn(1),
+        arrowdown: () => this.turn(-1),
+        s: () => this.turn(-1),
+        arrowleft: () => this.focusNeighbor(-1),
+        a: () => this.focusNeighbor(-1),
+        arrowright: () => this.focusNeighbor(1),
+        d: () => this.focusNeighbor(1),
       };
-      const action = actions[event.key];
+      const action = actions[event.key.toLowerCase()];
       if (!action) return;
       action();
       event.preventDefault();
