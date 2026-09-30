@@ -154,7 +154,11 @@ export class Vault {
     const isLast = this.index === PUZZLES.length - 1;
     if (isLast) this.audio.victory();
     else this.audio.unlockChime();
-
+      
+    if (navigator.vibrate) {
+    navigator.vibrate(isLast ? [60, 40, 60, 40, 120] : 50);
+    }
+   
     this.advanceTimer = setTimeout(() => {
       this.index++;
       writeItem(STORAGE_KEYS.progress, this.index);
