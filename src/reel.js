@@ -148,13 +148,6 @@ export class Reel {
     this.digit.addEventListener("pointercancel", stop);
   }
 
-    const stop = () => {
-      dragging = false;
-    };
-    this.digit.addEventListener("pointerup", stop);
-    this.digit.addEventListener("pointercancel", stop);
-  }
-
   bindKeys() {
     this.el.addEventListener("keydown", (event) => {
       if (this.locked) return;
