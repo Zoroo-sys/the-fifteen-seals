@@ -7,17 +7,12 @@ import { Vault } from "./vault.js";
 const view = new View();
 const certificate = new Certificate();
 const stopwatch = new Stopwatch((text) => view.setElapsed(text));
+const vault = new Vault({ view, audio: new AudioEngine(), stopwatch });
 
-const vault = new Vault({
-  view,
-  audio: new AudioEngine(),
-  stopwatch,
-  onEnterVictory: () => certificate.awaitVerification(),
-  onVictory: (solveTime, verified, rank) => {
-    certificate.setSolveTime(solveTime);
-    certificate.applyVerification(verified, rank);
-  },
-  onRestart: () => certificate.reset(),
+vault.addEventListener("vault:victory-entered", () => certificate.awaitVerification());
+vault.addEventListener("vault:victory-verified", (e) => {
+  certificate.setSolveTime(e.detail.solveTime);
+  certificate.applyVerification(e.detail.verified, e.detail.rank);
 });
 
 view.bindRestart(() => vault.restart());
