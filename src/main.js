@@ -14,6 +14,6 @@ vault.addEventListener("vault:victory-verified", (e) => {
   certificate.setSolveTime(e.detail.solveTime);
   certificate.applyVerification(e.detail.verified, e.detail.rank);
 });
-
+vault.addEventListener("vault:restarted", () => certificate.reset());
 view.bindRestart(() => vault.restart());
 vault.start();
