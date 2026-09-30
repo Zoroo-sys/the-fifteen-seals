@@ -104,29 +104,49 @@ export class Reel {
   }
 
  
-  bindDrag() {
+   bindDrag() {
     let dragging = false;
     let lastY = 0;
     let travelled = 0;
+    let pendingDelta = 0;
+    let rafId = null;
+
+    const processFrame = () => {
+      if (pendingDelta !== 0) {
+        travelled += pendingDelta;
+        pendingDelta = 0;
+        while (Math.abs(travelled) >= DRAG_STEP_PX) {
+          const step = Math.sign(travelled);
+          this.turn(step);
+          travelled -= step * DRAG_STEP_PX;
+        }
+      }
+      if (dragging) rafId = requestAnimationFrame(processFrame);
+    };
 
     this.digit.addEventListener("pointerdown", (event) => {
       if (this.locked) return;
       dragging = true;
       lastY = event.clientY;
       travelled = 0;
+      pendingDelta = 0;
       this.digit.setPointerCapture(event.pointerId);
+      rafId = requestAnimationFrame(processFrame);
     });
 
     this.digit.addEventListener("pointermove", (event) => {
       if (!dragging) return;
-      travelled += lastY - event.clientY; 
+      pendingDelta += lastY - event.clientY;
       lastY = event.clientY;
-      while (Math.abs(travelled) >= DRAG_STEP_PX) {
-        const step = Math.sign(travelled);
-        this.turn(step);
-        travelled -= step * DRAG_STEP_PX;
-      }
     });
+
+    const stop = () => {
+      dragging = false;
+      cancelAnimationFrame(rafId);
+    };
+    this.digit.addEventListener("pointerup", stop);
+    this.digit.addEventListener("pointercancel", stop);
+  }
 
     const stop = () => {
       dragging = false;
