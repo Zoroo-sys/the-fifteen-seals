@@ -45,6 +45,7 @@ export class Vault extends EventTarget {
     removeItem(STORAGE_KEYS.finalTime);
     removeItem(STORAGE_KEYS.proof);
     this.stopwatch.start();
+    this.dispatchEvent(new CustomEvent("vault:restarted"));
     this.render();
   }
 
