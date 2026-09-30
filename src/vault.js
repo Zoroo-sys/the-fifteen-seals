@@ -3,28 +3,32 @@ import { STORAGE_KEYS, TIMING } from "./config.js";
 import { checkGuess, verifyCompletion } from "./api.js";
 import { Reel } from "./reel.js";
 import { loadProgress, loadOrCreateSessionId, readItem, writeItem, removeItem } from "./storage.js";
+import { VaultState, assertValidTransition } from "./vaultState.js";
 
 
-export class Vault {
- 
-  constructor({ view, audio, stopwatch, onEnterVictory, onVictory, onRestart }) {
+export class Vault extends EventTarget {
+  constructor({ view, audio, stopwatch }) {
+    super();
     this.view = view;
     this.audio = audio;
     this.stopwatch = stopwatch;
-    this.onEnterVictory = onEnterVictory;
-    this.onVictory = onVictory;
-    this.onRestart = onRestart;
 
     this.sid = loadOrCreateSessionId();
     this.proof = readItem(STORAGE_KEYS.proof);
     this.index = loadProgress(PUZZLES.length);
+    this.state = this.index >= PUZZLES.length ? VaultState.VICTORY : VaultState.DIALING;
     this.reels = [];
     this.checkTimer = null;
     this.retryTimer = null;
     this.advanceTimer = null;
     this.checkToken = 0;
     this.rejected = new Set();
-    this.blockedUntil = new Map(); 
+    this.blockedUntil = new Map();
+  }
+
+  setState(next) {
+    assertValidTransition(this.state, next);
+    this.state = next;
   }
 
   start() {
@@ -36,11 +40,11 @@ export class Vault {
     clearTimeout(this.advanceTimer);
     this.index = 0;
     this.proof = null;
+    if (this.state !== VaultState.DIALING) this.setState(VaultState.DIALING);
     writeItem(STORAGE_KEYS.progress, 0);
     removeItem(STORAGE_KEYS.finalTime);
     removeItem(STORAGE_KEYS.proof);
     this.stopwatch.start();
-    this.onRestart();
     this.render();
   }
 
@@ -71,19 +75,20 @@ export class Vault {
     if (this.index >= PUZZLES.length || !this.reels.length || this.reels[0].locked) return;
 
     const sealIndex = this.index;
-    const guess = this.reels.map((reel) => reel.char).join("");
+    const guess = this.reels.map((r) => r.char).join("");
     clearTimeout(this.checkTimer);
     const token = ++this.checkToken;
 
-    
     if (this.rejected.has(`${sealIndex}:${guess}`)) return;
 
     const blockedFor = (this.blockedUntil.get(sealIndex) || 0) - Date.now();
     if (blockedFor > 0) {
+      if (this.state === VaultState.DIALING) this.setState(VaultState.BLOCKED);
       this.showBlocked(blockedFor);
       return;
     }
 
+    if (this.state === VaultState.DIALING) this.setState(VaultState.VERIFYING);
     this.checkTimer = setTimeout(() => this.runCheck(sealIndex, guess, token), TIMING.verifyDelayMs);
   }
 
@@ -93,14 +98,13 @@ export class Vault {
       reply = await checkGuess(sealIndex, guess, this.sid, this.proof);
     } catch (error) {
       if (token !== this.checkToken) return;
-     
       console.warn("[vault] worker request failed:", error);
       this.view.flashFooter("Couldn't reach the vault - check your connection.");
+      if (this.state === VaultState.VERIFYING) this.setState(VaultState.DIALING);
       return;
     }
 
     const status = reply?.status;
-    
     if (status === "wrong") this.rejected.add(`${sealIndex}:${guess}`);
     if (status === "limited") this.blockedUntil.set(sealIndex, Date.now() + reply.retryAfter * 1000);
     if (status === "unlock") {
@@ -111,28 +115,31 @@ export class Vault {
 
     switch (status) {
       case "unlock":
+        this.setState(VaultState.UNLOCKING);
         this.unlock();
         break;
       case "reset":
         this.restart();
         break;
       case "limited":
+        this.setState(VaultState.BLOCKED);
         this.showBlocked(reply.retryAfter * 1000);
         break;
       case "wrong":
+        if (this.state === VaultState.VERIFYING) this.setState(VaultState.DIALING);
         break;
       case "sequence":
-        
         console.warn("[vault] worker refused: seal attempted out of order");
         this.view.flashFooter("Solve the earlier locks first.");
+        if (this.state === VaultState.VERIFYING) this.setState(VaultState.DIALING);
         break;
       default:
         console.warn("[vault] unexpected worker reply:", reply);
         this.view.flashFooter("The vault sent a reply this page doesn't understand.");
+        if (this.state === VaultState.VERIFYING) this.setState(VaultState.DIALING);
     }
   }
 
-  
   showBlocked(ms) {
     const seconds = Math.ceil(ms / 1000);
     const wait = seconds <= 90 ? `${seconds}s` : `about ${Math.ceil(seconds / 60)} min`;
@@ -142,6 +149,7 @@ export class Vault {
     clearTimeout(this.retryTimer);
     this.retryTimer = setTimeout(() => {
       if (this.view.footerText === message) this.view.setFooter("");
+      if (this.state === VaultState.BLOCKED) this.setState(VaultState.VERIFYING);
       this.scheduleCheck();
     }, ms + TIMING.blockRetryPaddingMs);
   }
@@ -154,22 +162,21 @@ export class Vault {
     const isLast = this.index === PUZZLES.length - 1;
     if (isLast) this.audio.victory();
     else this.audio.unlockChime();
-      
-    if (navigator.vibrate) {
-    navigator.vibrate(isLast ? [60, 40, 60, 40, 120] : 50);
-    }
-   
+
+    this.dispatchEvent(new CustomEvent("vault:unlocked", { detail: { index: this.index, isLast } }));
+
     this.advanceTimer = setTimeout(() => {
       this.index++;
       writeItem(STORAGE_KEYS.progress, this.index);
+      if (this.index < PUZZLES.length) this.setState(VaultState.DIALING);
       this.render();
     }, TIMING.unlockAdvanceMs);
   }
 
-  
   async enterVictory() {
     this.cancelPendingChecks();
     this.stopwatch.stop();
+    if (this.state !== VaultState.VICTORY) this.setState(VaultState.VICTORY);
 
     let solveTime = readItem(STORAGE_KEYS.finalTime);
     if (solveTime === null) {
@@ -178,7 +185,7 @@ export class Vault {
     }
     this.view.setElapsed(solveTime);
     this.view.showVictory();
-    this.onEnterVictory();
+    this.dispatchEvent(new CustomEvent("vault:victory-entered"));
 
     let verified = false;
     let rank = null;
@@ -189,6 +196,6 @@ export class Vault {
     } catch (error) {
       console.warn("[vault] could not verify completion:", error);
     }
-    this.onVictory(solveTime, verified, rank);
+    this.dispatchEvent(new CustomEvent("vault:victory-verified", { detail: { solveTime, verified, rank } }));
   }
 }
