@@ -13,6 +13,14 @@
   --font-body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-display:"Cinzel", Georgia, "Times New Roman", serif;
   --font-dial:"Courier New", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --seismic-radial-blur: 10px;      
+  --seismic-glass-saturation: 140%; 
+  --seal-glow-intensity: 1;        
+  --seal-glow-locked: 0 0 10px 1px rgba(181,69,27, calc(0.6 * var(--seal-glow-intensity)));
+  --seal-glow-unlocked: 0 0 12px 2px rgba(47,122,79, calc(0.6 * var(--seal-glow-intensity)));
+  --seismic-grain-opacity: 0.09;    
+  --seismic-glyph-opacity: 0.16;    
+  --seal-transition-speed: 0.4s;    
 }
 
 *{ box-sizing:border-box; }
