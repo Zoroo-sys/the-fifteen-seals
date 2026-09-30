@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Fifteen Seals · Seismic Vault</title>
+<link rel="icon" type="image/png" href="assets/images/seismic-gem.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <img class="mark" src="assets/images/seismic-gem.png" alt="Seismic" />
+    <div class="title-row">
+      <img class="glyph-icon" src="assets/icons/ankh.svg" alt="" />
+      <h1>The Fifteen Seals</h1>
+      <img class="glyph-icon" src="assets/icons/eye.svg" alt="" />
+    </div>
+    <p class="tagline">15 Seals. 15 Words. Uncover the secrets hidden within the Seismic ecosystem.</p>
+    <div class="frieze" aria-hidden="true"></div>
+  </header>
+
+  <div class="progress-block">
+    <div class="seals" id="seals"></div>
+    <div class="progress-meta">
+      <span id="progressPct">0%</span>
+      <span class="progress-sep">·</span>
+      <span id="elapsedTime">00:00</span>
+    </div>
+  </div>
+
+  <main id="puzzleView">
+    <div class="hint-plate">
+      <div class="num" id="hintNum"></div>
+      <div class="text" id="hintText"></div>
+    </div>
+
+    <div class="lock" id="lock">
+      <!-- inline so the CSS can animate the shackle when the lock opens -->
+      <div class="shackle">
+        <svg viewBox="0 0 64 44"><path class="arc" d="M8 40 V16 A16 16 0 0 1 40 16 V30"/></svg>
+      </div>
+      <div class="indicator"></div>
+      <div class="reels" id="reels"></div>
+    </div>
+
+    <p class="lock-footer" id="lockFooter"></p>
+     <p class="controls-hint">Use <span>↑</span> <span>↓</span> <span>←</span> <span>→</span> or scroll to align the seals.</p>
+
+    <button class="ghost-btn" id="resetBtn" type="button">Start over</button>
+  </main>
+
+  <section id="victoryView" class="victory hidden">
+    <img class="mascot" src="assets/images/mascot.png" alt="" />
+    <h2>All fifteen locks are open</h2>
+    <p>Upload your photo to generate your seal as a verified encrypted player, stamped by Seismic.</p>
+
+    <p class="verify-status hidden" id="verifyStatus"></p>
+    <label class="upload-box hidden" id="uploadBox" for="photoInput">
+      <span id="uploadLabel">Click to upload your photo</span>
+      <input type="file" id="photoInput" accept="image/*" />
+    </label>
+
+    <div id="shieldWrap" class="shield-wrap hidden">
+      <img id="shieldPreview" alt="Your verified encrypted player seal" />
+      <button class="ghost-btn" id="changePhotoBtn" type="button">Change photo</button>
+    </div>
+
+    <button class="cta" id="downloadBtn" type="button" disabled>Download your seal</button>
+  </section>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
